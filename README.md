@@ -2,6 +2,29 @@
 
 Türkiye'deki işletmeler için banka tahsilatlarını cari hareketler ve e-Belge süreçleriyle eşleştiren otomasyon platformu.
 
+## Durum
+
+Bu dal production temelinin ilk güvenlik artımını içerir; tam e-Belge ürünü değildir. Gerçek GİB/özel entegratör gönderimi kapalıdır. Güncel tamamlanan parçalar:
+
+- PostgreSQL tarafından zorlanan tenant kapsamlı ilişkiler
+- Advisory lock, checksum ve replay korumalı migration runner
+- `/health`, veritabanı kontrollü `/ready`, correlation ID ve ortak hata zarfı
+- Güvenli CORS varsayılanı, loglarda credential maskeleme ve graceful shutdown
+- Unit ve PostgreSQL integration test temeli
+
+## Lokal geliştirme
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+npm ci
+npm run db:migrate
+npm test
+npm run dev
+```
+
+Migration komutunun ikinci çalışması `0 applied` ile başarılı olur. PostgreSQL integration testlerini çalıştırmak için `TEST_DATABASE_URL` tanımlayın.
+
 ## V1 hedefleri
 
 - Çok işletmeli (multi-tenant) SaaS altyapısı
