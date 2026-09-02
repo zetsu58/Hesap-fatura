@@ -1,29 +1,17 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { BankTransactionSchema } from './domain/transaction.js';
-import { decideDocument } from './services/document-decision.js';
+import { buildApp } from './app.js';
+import { loadEnvironment } from './config.js';
+import { db } from './db.js';
 
-const app = Fastify({ logger: true });
-await app.register(cors, { origin: false });
-
-app.get('/health', async () => ({ status: 'ok', service: 'hesapfatura-api' }));
-
-app.post('/v1/transactions/decision', async (request, reply) => {
-  const parsed = BankTransactionSchema.safeParse(request.body);
-  if (!parsed.success) {
-    return reply.code(400).send({
-      error: 'INVALID_TRANSACTION',
-      details: parsed.error.flatten()
-    });
-  }
-
-  return {
-    transactionId: parsed.data.id,
-    decision: decideDocument(parsed.data)
-  };
-});
-
-const port = Number(process.env.PORT ?? 3000);
-const host = process.env.HOST ?? '0.0.0.0';
-
-await app.listen({ port, host });
+const config = loadEnvironment();
+const app = await buildApp();
+let closing = false;
+const shutdown = async (signal: string): Promise<void> => {
+  if (closing) return;
+  closing = true;
+  app.log.info({ signal }, 'graceful shutdown started');
+  await app.close();
+  await db?.end();
+};
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
+process.once('SIGINT', () => void shutdown('SIGINT'));
+await app.listen({ port: config.PORT, host: config.HOST });
